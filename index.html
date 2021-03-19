@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport"
+	content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<meta name="description" content="" />
+<meta name="author" content="" />
+<title>Resume - Start Bootstrap Theme</title>
+<link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
+<!-- Font Awesome icons (free version)-->
+<script src="https://use.fontawesome.com/releases/v5.15.1/js/all.js"
+	crossorigin="anonymous"></script>
+<!-- Google fonts-->
+<link
+	href="https://fonts.googleapis.com/css?family=Saira+Extra+Condensed:500,700"
+	rel="stylesheet" type="text/css" />
+<link
+	href="https://fonts.googleapis.com/css?family=Muli:400,400i,800,800i"
+	rel="stylesheet" type="text/css" />
+<!-- Core theme CSS (includes Bootstrap)-->
+<link href="css/styles.css" rel="stylesheet" />
+ <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="./bpopup/jquery.bpopup-0.1.1.min.js"></script> <!-- 팝업 플러그인 -->
+    <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap" rel="stylesheet">
+    <link href='./fullcalendar-5.5.1/lib/main.css' rel='stylesheet'/>
+    <link href='./calendar.css' rel='stylesheet'/>
+    <script src='./fullcalendar-5.5.1/lib/main.js'></script>
+    <script src='./fullcalendar-5.5.1/lib/locales/ko.js'></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script> <!--날짜 가공-->
+    <script type="text/javascript" src="http://code.jquery.com/ui/1.10.1/jquery-ui.js"></script> <!--모달창 움직임-->
+    	
+	<!-- Core theme JS-->
+	<script src="js/scripts.js"></script>
+    <title>3조 8hours</title>
+    <!--  style 적용 -->
+    <style>
+    	 body>header>div.logo{
+        float: left;
+        height: 60px;
+        width: 200px;
+        display: inline-block;
+
+    }
+    body>header>div.logout{
+        float:right;
+        height: 60px;
+        padding-top: 23px;
+    }
+    body>header img#logo {
+        width: 150px;
+        padding-left: 30px;
+        padding-top: 10px;
+    }
+    body>header span>a#logout{
+        text-align: right;
+        color: gray;
+        text-decoration: none;
+    }
+     body>header img#status{
+        width: 50px;
+        float: right;
+        padding-top: 5px;
+    }
+    </style>
+<!--jquery사용-->
+
+	<script>
+	$(function(){ //HTML작업 이후 페이지가 뜨자마자 시작될 함수 
+		
+		$(function(){
+			   $('.nav-link').on("click",function(e){
+			       e.preventDefault();
+			   });
+			});
+	
+		//이름과 출근시간을 메인페이지에 출력하기
+        var loginedId = localStorage.getItem('id'); //localStorage.getItem을 쓸 수 있는 이유는 login.html에서 localStorage.setItem으로 세팅을 했기 때문이다.
+        $.ajax({
+            url: "./first", //서블릿(로그인 하고 나서 비동기형으로 화면을 바꿀 건데 그 바뀌는 내용을 정의할 곳이 first서블릿이다. )
+            method: "get",
+           /*  data : {'id' : loginedId}, */
+            success: function(responseObj){
+                console.log(responseObj.starttime);
+                $("#name").val(responseObj.name); //"#name".val의 값을 responseObj.name으로 가져온 값으로 넣어라. 
+                $("#starttime").val(responseObj.starttime); //출근값 넣기 
+                $("#endtime").val(responseObj.endtime);
+                
+            },
+            error: function(jqXHR){
+                alert("AJAX요청응답 실패: 에러코드="+jqXHR.status);
+            }
+            
+        });
+        
+        $("section>article").load("./calendar.html");
+        
+        
+        
+        //DOM트리에서 퇴근버튼 찾기 
+		var $menuEnd = $("body>section>nav>div>div>div#endTimeBtn");
+        //퇴근버튼이 클릭되면
+        var loginedId = localStorage.getItem('id');
+        $menuEnd.click(function(event){
+            $.ajax({
+                url: "./endtimepage",
+                method: "get",
+               
+                success: function(responseObj){
+                	$("#endtime").val(responseObj.endtime);
+                },
+                error: function(jqXHR){
+                    alert("AJAX요청응답 실패: 에러코드="+ jqXHR.status);
+                }     
+            });
+
+
+        });
+
+
+		
+		
+		//DOM트리에서 nav메뉴객체들 모두 찾기
+		var $menuObj = $("body>nav>div>ul>li>a");
+		
+
+		//nav 메뉴가 클릭되면
+		$menuObj.click(function(event){
+
+			//다른 메뉴를 section 영역에 뿌리기 전에 article 영역 비우기
+			$("body>section>article").empty();
+
+			//target으로 객체정보를 받아오고 그 객체의 "href"의 속성값을 .attr로 가져와서 var hrefValue에 대입하기 
+			var hrefValue = $(this).attr("href");
+            $.ajax({
+                url: hrefValue,
+                method: "post",
+                success: function(data){ //성공응답
+                	console.log(data);
+                    $("div>section>article").html(data); //누른 메뉴의 화면을 section>article영역에 띄워라
+                }, 
+                error: function(jqXHR){ //실패응답
+                    alert("AJAX요청응답 실패: 에러코드=" + jqXHR.status);
+                } 
+            });
+            return false; //기본이벤트 실행 막기 
+        });
+
+
+
+        //DOM트리에서 로그아웃 객체 찾기
+        var $logoutObj = $("body>header>div>span>a#logout");
+        //로그아웃 메뉴가 클릭되면
+        $logoutObj.click(function(event){
+            hrefValue = $(event.target).attr("href");
+            $.ajax({
+                url: hrefValue,
+                method: 'get',
+                success: function(responseObj){ //성공응답
+                	location.href = "http://" + window.location.hostname + ":8888/KOREA_WEB_ERP";
+                    //location.href= "http://" + ip() + ":8888/KOREA_WEB_ERP";
+                    //"http://localhost:8888/KOREA_WEB_ERP";
+                	//location.href="http://13.125.126.131:8888/KOREA_WEB_ERP";
+                },
+                error: function(jqXHR){ //실패응답
+                    alert("AJAX요청응답 실패: 에러코드=" + jqXHR.status);
+                }
+            });
+            return false; //기본이벤트 실행 막기 
+        });
+ 
+    });
+	//	햄버거바
+	$(".ham").off("click").on("click", function(){
+		console.log(1);
+		if($(".min-nav").hasClass("show")){
+			$(".min-nav").removeClass("show");
+		}else{
+			$(".min-nav").addClass("show");
+		}
+	})
+    </script>
+</head>
+<body id="page-top">
+
+    <header>
+        <div class="logo">
+            <a href="./index.html"><img src="./img/logo.png" alt="logo" id="logo" href="http://www.naver.com"></a>
+            <span style="width: 500px; display: block; padding-left: 220px; padding-bottom: 40px;"> </span>
+        </div>
+        <div class="logout">
+            <span > <input type="text"  id="name" readonly> </span> &nbsp;&nbsp;
+            <span><a href="logout" id="logout">로그아웃 </a></span>
+        </div>
+        <img src="./img/status.png" alt="status" id="status">
+    </header>
+    
+	<!-- Navigation-->
+	<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top"
+		id="sideNav">
+		<a class="navbar-brand js-scroll-trigger" href="#page-top"> <span
+			class="d-block d-lg-none">Clarence Taylor</span> <span
+			class="d-none d-lg-block"><img
+				class="img-fluid img-profile  mx-auto mb-2"
+				src="./img/logo.png" alt="로고" /></span>
+		</a>
+		<button class="navbar-toggler ham" type="button" data-toggle="collapse"
+			data-target="#navbarSupportedContent"
+			aria-controls="navbarSupportedContent" aria-expanded="false"
+			aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+		<div class="collapse navbar-collapse min-nav" id="navbarSupportedContent">
+			<ul class="navbar-nav">
+				<li class="nav-item"><div class="nav-link"
+					>출근</div>
+					<div class="time"><input type="text" id="starttime" style="background: none; border: 0; text-align: center;color: white;" readonly ></div></li>
+				<li class="nav-item"><div class="nav-link"
+					>퇴근</div>
+					<div class="time"><input type="text" id="endtime" style="background: none; border: 0; text-align: center;color: white;" readonly> </div>
+					</li>
+				<li class="nav-item"><a class="nav-link"
+					href="myinfo.html">내정보</a></li>
+				<li class="nav-item"><a class="nav-link"
+					href="payment.html">급여</a></li>
+				<li class="nav-item"><a class="nav-link"
+					href="board.html">게시판</a></li>
+				<li class="nav-item"><a class="nav-link"
+					href="payment.html">결재</a></li>
+				<li class="nav-item"><a class="nav-link"
+					href="board.html">근태관리</a></li>
+
+			</ul>
+		</div>
+	</nav>
+	<!-- Page Content-->
+	<div class="container-fluid p-0">
+		<!-- About-->
+		<section class="resume-section" style="width:100%; padding:0;">
+
+				<article style="width: 90%; padding: 5;" class="article">article영역</article>
+
+		</section>
+		 
+		
+	</div>
+
+</body>
+</html>
