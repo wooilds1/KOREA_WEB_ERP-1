@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang='ko'>
+  <head>
+    <meta charset='utf-8' />
+    <script>
+      /* 업로드 체크 */
+      function fileCheck( file )
+      {
+        // 사이즈체크
+        var maxSize  = 5 * 1024 * 1024    //30MB
+        var fileSize = 0;
+        // 브라우저 확인
+        var browser=navigator.appName;     
+        // 익스플로러일 경우
+        if (browser=="Microsoft Internet Explorer")
+        {
+          var oas = new ActiveXObject("Scripting.FileSystemObject");
+          fileSize = oas.getFile( file.value ).size;
+        }
+        // 익스플로러가 아닐경우
+        else
+        {
+          fileSize = file.files[0].size;
+        }
+        if(fileSize > maxSize)
+        {
+            alert("첨부파일 사이즈는 5MB 이내로 등록 가능합니다.    ");
+            return false;
+        }else{
+          return true;
+        }
+      }
+    </script>
+    <script>
+      $(function() {
+        var loginedId = localStorage.getItem('id');
+        $.ajax({
+          url: "./annualleave",
+          success: function(responseObj){
+            localStorage.setItem("used_day", responseObj.used_day);
+          }
+        });
+
+        var calendarEl = document.getElementById('calendar');
+        // var statusArr = ["1","2","3"]; // 개인일정 1-업무, 2-출장, 3-연차
+        var checkedArr = ["1","1","1","1","1"]; // 박스 체크 되었는지 (1이면 true 2면 false)
+        var empcheckedArr = ["1","1","1"];
+        var filepath = "";
+        var filename = "";
+        var textColor = 'white';
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          locale: 'ko',
+          selectable: true,
+          dayMaxEventRows : true,
+          eventDisplay: 'block', //모든 이벤트 블록표시
+          // contentHeight: "auto",
+          // aspectRatio : 1.35,
+          // handleWindowResize : false,
+
+          //일정추가 버튼
+          customButtons: {
+            addEventButton: {
+              text: '일정추가',
+              click: function() {
+                $("#newScheduleForm")[0].reset();
+                $(".trigger").val(0);
+                var d = new Date();
+                var month;
+                var day;
+                //함수로 묶기
+                if((d.getMonth()+1)<10){
+                  var month = '0'+(d.getMonth()+1);
+                }else{
+                  month = d.getMonth()+1
+                }
+                if((d.getDate())<10){
+                  var day = '0'+(d.getDate());
+                }else{
+                  day = d.getDate();
+                }
+                if((d.getHours()+1)<10){
+                  var startHours = '0'+(d.getHours()+1);
+                }else{
+                  startHours = d.getHours()+1
+                }
+                if((d.getHours()+2)<10){
+                  var endHours = '0'+(d.getHours()+2);
+                }else{
+                  endHours = d.getHours()+2
+                }
+                if(startHours >= 24){
+                  startHours -= 24;
+                  startHours = '0' + startHours;
+                }
+                if(endHours >= 24){
+                  endHours -= 24;
+                  endHours = '0' + endHours;
+                }
+                var str = d.getFullYear()+'-'+month+'-'+day;
+                $("input[name=newScheduleStartDate]").val(str);
+                $("input[name=newScheduleStartTime]").val(startHours+":00");
+                $("input[name=newScheduleEndDate]").val(str);
+                $("input[name=newScheduleEndTime]").val(endHours+":00");
+                $("#statusBox").val("1").prop("selected", true);
+                $("#statusBox>.employeeStatus").removeAttr('disabled');
+                $("#statusBox>.departmentStatus").removeAttr('disabled');
+                $('#element_to_pop_up').bPopup({
+                  modalClose: false,
+                });
+              }
+            }
+          },
+          // 일정추가 버튼
+
+          headerToolbar:{
+            left:'today',
+            center: 'title',
+            right:'addEventButton prev next'
+          },
+          dayHeaderDidMount : function (e){
+            $(e.el).css('background-color', '#f1f1f1');
+            if(e.text == '일'){
+              $(e.el).css('color', 'red');
+            }
+          },
+          dayCellContent: function (e) { //날짜에 일 붙는거 삭제
+            e.dayNumberText = e.dayNumberText.replace ('일','');
+          },
+          dayCellDidMount: function (e) {
+            if(e.date.getDay() == 0){
+              $(e.el).css('color', 'red');
+            }
+          },
+		  
+          //달력에 표시될 모든 이벤트들
+          eventSources: [
+            {
+              events : function(info, successCallback, failureCallback){ //개인일정
+                $.ajax({
+                  url:"./viewempevent",
+                  // traditional : true, //배열값을 자바에 넘겨줄 수 있다
+                  data : {"status" : "1", "checked" : empcheckedArr[0]},
+                  success : function(responseObj){
+                    successCallback(responseObj);
+                  },
+                  error : function(jqXHR){
+                	  alert("오류 : " + jqXHR.status);
+                  }
+                });
+              },
+              color : '#d1bd08',
+              textColor: textColor,
+              id : "1",
+            },
+
+            {
+              events : function(info, successCallback, failureCallback){ //개인일정
+                $.ajax({
+                  url:"./viewempevent",
+                  data : {"status" : "2", "checked" : empcheckedArr[1]},
+                  success : function(responseObj){
+                    successCallback(responseObj);
+                  },
+                  error : function(jqXHR){
+                	  alert("오류 : " + jqXHR.status);
+                  }
+                });
+              },
+              color : '#d1bd08',
+              textColor: textColor,
+              id : "2",
+            },
+
+            {
+              events : function(info, successCallback, failureCallback){ //개인일정
+                $.ajax({
+                  url:"./viewempevent",
+                  data : {"status" : "3", "checked" : empcheckedArr[2]},
+                  success : function(responseObj){
+                    successCallback(responseObj);
+                  },
+                  error : function(jqXHR){
+                	  alert("오류 : " + jqXHR.status);
+                  }
+                });
+              },
+              color : '#d1bd08',
+              textColor: textColor,
+              id : "3",
+            },
+
+            {
+              events : function(info, successCallback, failureCallback){ //부서일정
+                $.ajax({
+                  url:"./viewdeptevent",
+                  data : {"dept_id" : "1000", "checked" : checkedArr[0]},
+                  success : function(responseObj){
+                    successCallback(responseObj);
+                  },
+                  error : function(jqXHR){
+                	  alert("오류 : " + jqXHR.status);
+                  }
+                });
+              },
+              color: '#3f7f00',
+              textColor: textColor,
+              id : "1000",
+            },
+
+            {
+              events : function(info, successCallback, failureCallback){ //부서일정
+                $.ajax({
+                  url:"./viewdeptevent",
+                  data : {"dept_id" : "2000", "checked" : checkedArr[1]},
+                  success : function(responseObj){
+                    successCallback(responseObj);
+                  },
+                  error : function(jqXHR){
+                	  alert("오류 : " + jqXHR.status);
+                  }
+                });
+              },
+              color: '#005fbf',
+              textColor: textColor,
+              id : "2000",
+            },
+
+            {
+              events : function(info, successCallback, failureCallback){ //부서일정
+                $.ajax({
+                  url:"./viewdeptevent",
+                  data : {"dept_id" : "3000", "checked" : checkedArr[2]},
+                  success : function(responseObj){
+                    successCallback(responseObj);
+                  },
+                  error : function(jqXHR){
+                	  alert("오류 : " + jqXHR.status);
+                  }
+                });
+              },
+              color: '#cc5dd7',
+              textColor: textColor,
+              id : "3000",
+            },
+
+            {
+              events : function(info, successCallback, failureCallback){ //부서일정
+                $.ajax({
+                  url:"./viewdeptevent",
+                  data : {"dept_id" : "4000", "checked" : checkedArr[3]},
+                  success : function(responseObj){
+                    successCallback(responseObj);
+                  },
+                  error : function(jqXHR){
+                	  alert("오류 : " + jqXHR.status);
+                  }
+                });
+              },
+              color: '#ff9364',
+              textColor: textColor,
+              id : "4000",
+            },
+
+            {
+              events : function(info, successCallback, failureCallback){ //부서일정
+                $.ajax({
+                  url:"./viewdeptevent",
+                  data : {"dept_id" : "5000", "checked" : checkedArr[4]},
+                  success : function(responseObj){
+                    successCallback(responseObj);
+                  },
+                  error : function(jqXHR){
+                	  alert("오류 : " + jqXHR.status);
+                  }
+                });
+              },
+              color: '#52d49a',
+              textColor: textColor,
+              id : "5000",
+            },
+
+          ],
+          // 이벤트 선언 끝
+
+
+          eventContent: function(info) {
+        	/*
+            var String = "";
+            if(info.event.source.id == "1" || info.event.source.id == "2" || info.event.source.id == "3"){
+              String = "[" + info.event.extendedProps.status_name + "]" + " " + info.timeText;
+              info.timeText = String;
+            }else{
+              String = "[" + info.event.extendedProps.dept_name + "]" + " " + info.timeText;
+              info.timeText = String;
+            }
+            */
+            var String = "";
+        	if(info.event.extendedProps.emp_id == loginedId){
+        		String = "🙋‍♂️"+ info.timeText;
+        		info.timeText = String;
+        	}
+          },
+
+
+          eventDidMount: function(info) { //DOM에 이벤트 추가되면
+            // console.log(info.event.id);
+            // console.log(info.event.extendedProps.name);
+            // {description: "Lecture", department: "BioChemistry"}
+            // var tooltip = new Tooltip(info.el, {
+            //   title: info.event.extendedProps.description,
+            //   placement: 'top',
+            //   trigger: 'hover',
+            //   container: 'body'
+            // });
+          },
+
+          // 이벤트에 마우스를 올렸을 때
+          eventMouseEnter : function(info) { 
+            $(info.el).css('cursor', 'pointer');
+
+            // var tooltip = new Tooltip(info.el, {
+            //   title: info.event.extendedProps.content,
+            //   placement: 'top',
+            //   trigger: 'hover',
+            //   container: 'body'
+            // });
+          },
+
+          //셀 한개가 클릭됬을 때
+          dateClick: function(info) { 
+            $("#newScheduleForm")[0].reset();
+            $(".trigger").val(0);
+            var d = new Date();
+            if((d.getHours()+1)<10){
+              var startHours = '0'+(d.getHours()+1);
+            }else{
+              startHours = d.getHours()+1
+            }
+            if((d.getHours()+2)<10){
+              var endHours = '0'+(d.getHours()+2);
+            }else{
+              endHours = d.getHours()+2
+            }
+            if(startHours >= 24){
+              startHours -= 24;
+              startHours = '0' + startHours;
+            }
+            if(endHours >= 24){
+              endHours -= 24;
+              endHours = '0' + endHours;
+            }
+            $("input[name=newScheduleStartDate]").val(info.dateStr);
+            $("input[name=newScheduleStartTime]").val(startHours+":00");
+            $("input[name=newScheduleEndDate]").val(info.dateStr);
+            $("input[name=newScheduleEndTime]").val(endHours+":00");
+            $("#statusBox").val("1").prop("selected", true);
+            $("#statusBox>.employeeStatus").removeAttr('disabled');
+            $("#statusBox>.departmentStatus").removeAttr('disabled');
+            $('#element_to_pop_up').bPopup({
+              modalClose: false,
+            });
+          },
+          //셀 한개 클릭 끝
+
+          //셀을 한개 혹은 여러개 선택했을 때
+          select: function(info) {
+            $("#newScheduleForm")[0].reset();
+            $(".trigger").val(0);
+            //함수로 묶기
+            var d = new Date();
+            if((d.getHours()+1)<10){
+              var startHours = '0'+(d.getHours()+1);
+            }else{
+              startHours = d.getHours()+1
+            }
+            if((d.getHours()+2)<10){
+              var endHours = '0'+(d.getHours()+2);
+            }else{
+              endHours = d.getHours()+2
+            }
+            if((info.end.getUTCMonth()+1)<10){
+              var endMonth = '0'+(info.end.getUTCMonth()+1);
+            }else{
+              endMonth = info.end.getUTCMonth()+1
+            }
+            if((info.end.getUTCDate())<10){
+              var endDate = '0'+(info.end.getUTCDate());
+            }else{
+              endDate = info.end.getUTCDate();
+            }
+            if(startHours >= 24){
+              startHours -= 24;
+              startHours = '0' + startHours;
+            }
+            if(endHours >= 24){
+              endHours -= 24;
+              endHours = '0' + endHours;
+            }
+            var endString = info.end.getFullYear()+"-"+endMonth+"-"+endDate;
+            $("input[name=newScheduleStartDate]").val(info.startStr);
+            $("input[name=newScheduleStartTime]").val(startHours+":00");
+            $("input[name=newScheduleEndDate]").val(endString);
+            $("input[name=newScheduleEndTime]").val(endHours+":00");
+            $("#statusBox").val("1").prop("selected", true);
+            $("#statusBox>.employeeStatus").removeAttr('disabled');
+            $("#statusBox>.departmentStatus").removeAttr('disabled');
+            $('#element_to_pop_up').bPopup({
+              modalClose: false,
+            });
+          },
+          // 셀 선택 끝
+
+          // 이벤트 클릭됬을 때
+          eventClick: function(info){ 
+            // console.log(info.event.extendedProps.description);
+            // console.log(info.event.id);
+            $(".scheduleNo").val(info.event.id);
+            $(".scheduleTitle").html(info.event.title);
+            $(".scheduleCreateEmployee").html(info.event.extendedProps.emp_name);
+            $(".scheduleContent").html(info.event.extendedProps.content);
+            switch(info.event.extendedProps.schedule_status){
+              case 1:
+              $(".scheduleStatus").html("업무");
+              $("#scheduleColorLine").removeAttr("hidden");
+              $("#scheduleColorLine").prop("src", "./img/업무.png");
+              break;
+              case 2:
+              $(".scheduleStatus").html("출장");
+              $("#scheduleColorLine").removeAttr("hidden");
+              $("#scheduleColorLine").prop("src", "./img/출장.png");
+              break;
+              case 3:
+              $(".scheduleStatus").html("연차");
+              $("#scheduleColorLine").removeAttr("hidden");
+              $("#scheduleColorLine").prop("src", "./img/연차.png");
+              break;
+              case 4:
+              $(".scheduleStatus").html("팀");
+              $("#scheduleColorLine").prop("hidden", true);
+              if(info.event.extendedProps.dept_id == "1000"){
+                $("#scheduleDepartmentColorLine").prop("src", "./img/영업팀.png");
+              }else if(info.event.extendedProps.dept_id == "2000"){
+                $("#scheduleDepartmentColorLine").prop("src", "./img/총무팀.png");
+              }else if(info.event.extendedProps.dept_id == "3000"){
+                $("#scheduleDepartmentColorLine").prop("src", "./img/자료관리팀.png");
+              }else if(info.event.extendedProps.dept_id == "4000"){
+                $("#scheduleDepartmentColorLine").prop("src", "./img/사업관리팀.png");
+              }else if(info.event.extendedProps.dept_id == "5000"){
+                $("#scheduleDepartmentColorLine").prop("src", "./img/모바일팀.png");
+              }
+              break;
+            }
+            $(".scheduleTime").html((moment(info.event.start).format('YYYY-MM-DD HH:mm')) + " ~ " + (moment(info.event.end).format('YYYY-MM-DD HH:mm')));
+            
+            if(info.event.extendedProps.filename != undefined){
+              $(".scheduleFile").html('<a href="#" class="fileDownload" style ="text-decoration:none;">' + info.event.extendedProps.filename + '</a>');
+              $('.fileDownload').prop('href', 'download?filename='+ info.event.extendedProps.filename);
+              $(".filePath").val(info.event.extendedProps.filepath);
+              filename = info.event.extendedProps.filename;
+              filepath = info.event.extendedProps.filepath;
+            }else{
+              $(".scheduleFile").html("없음");
+              $(".filePath").val("");
+              filename = "";
+              filepath = "";
+            }
+            
+            if(info.event.extendedProps.dept_id != undefined){
+              $("#departmentViewTable").css('display', 'table-row');
+              $(".scheduleDepartment").html(info.event.extendedProps.dept_name);
+            } else{
+              $("#departmentViewTable").css('display', 'none');
+            }
+            // 팀 일정 중 자기가 올린 일정 아니면 수정, 삭제 안뜨게
+            if(info.event.extendedProps.emp_id == loginedId){
+              $("div.buttonDiv").css('visibility', 'visible');
+            }else{
+              $("div.buttonDiv").css('visibility', 'hidden');
+            }
+            $('#element_to_pop_up2').bPopup({
+              modalClose: false,
+            });
+          },
+          // 이벤트 클릭 끝
+
+
+          eventTimeFormat: { // like '14:30:00'
+            hour: '2-digit',
+            minute: '2-digit',
+            //meridiem: 'short',
+            hour12 : false,
+          },
+        });
+
+        //addEvent remove는 트리거가 있을때만(문서가 준비되고 바로 하려면 캘린더 초기화부분에)
+
+        calendar.render(); //달력 그리기
+
+        //저장버튼 클릭
+        $("#element_to_pop_up>section>form>div>ul>li>input[type=submit]").click(function(){
+            // var $data = $("#newScheduleForm").serialize();
+            // var $data = $("#newScheduleForm")[0];
+            // 파일 크기 체크
+            if($("input[name=uploadFile]").val() != ""){
+              if(!fileCheck(this.form.uploadFile)){
+                return false;
+              }
+            }
+            
+            var $data = $('#newScheduleForm')[0];
+            var dataForm = new FormData($data);
+            var title = $("input[name=newScheduleTitle]").val();
+            var startTime = $("input[name=newScheduleStartTime]").val();
+            var endTime = $("input[name=newScheduleEndTime]").val();
+            var startDate = $("input[name=newScheduleStartDate]").val();
+            var endDate = $("input[name=newScheduleEndDate]").val();
+            var correctTime = false;
+            var titleCheck = false;
+            var annualCheck = true;
+
+            var sdt = new Date(startDate);
+            var edt = new Date(endDate);
+            var dateDiff = Math.ceil((edt.getTime()-sdt.getTime())/(1000*3600*24));
+
+            if(title.trim() != ''){
+              titleCheck = true;
+            }
+
+            if(startDate <= endDate){
+              if(startDate.valueOf()===endDate.valueOf()){
+                if(startTime < endTime){
+                  correctTime = true;
+                }
+              }else{
+                correctTime = true;
+              }
+            }
+
+            if($("#statusBox option:selected").val() == 3){
+              if(localStorage.getItem('used_day') < (dateDiff+1)){
+                annualCheck = false;
+              }
+            }           
+
+            if(correctTime && titleCheck && annualCheck){ //시간조건 , 제목비어있는지 확인
+              if($(".trigger").val() == 0){ // 그냥 저장버튼 눌렀을 때
+                $.ajax({
+                  url: "./addevent",
+                  method: "post",
+                  enctype: 'multipart/form-data',
+                  dataType : 'json',
+                  contentType : false,
+                  processData : false,
+                  data : dataForm,
+                  success: function(responseObj){
+                    if(responseObj.status == undefined){
+                      if($("#statusBox option:selected").val() != 4) {
+                        calendar.getEventSourceById($("#statusBox").val()).refetch();
+                      }else{
+                        calendar.getEventSourceById(responseObj[0]['dept_id']).refetch();
+                      }
+                      $("#element_to_pop_up").bPopup().close();
+                    }else if(responseObj.status == -1){
+                      alert("리스트를 추가하는데 오류가 발생했습니다");
+                    }
+                  },
+                });
+              } else if($(".trigger").val() == 1){ //수정해서 저장버튼 눌렀을 때
+                  $.ajax({
+                    url: "./updateevent",
+                    method: "post",
+                    enctype: 'multipart/form-data',
+                    dataType : 'json',
+                    contentType : false,
+                    processData : false,
+                    data : dataForm,
+                    success: function(responseObj){
+                      if(responseObj.status == undefined){
+                        if($("#statusBox option:selected").val() != 4) { //나중에 조건 바꾸기 개인일정만 refetch
+                          if($(".scheduleStatus").text() == "업무"){
+                            calendar.getEventSourceById("1").refetch();
+                          } else if($(".scheduleStatus").text() == "출장"){
+                            calendar.getEventSourceById("2").refetch();
+                          } else if($(".scheduleStatus").text() == "연차"){
+                            calendar.getEventSourceById("3").refetch();
+                          }
+                          calendar.getEventSourceById($("#statusBox").val()).refetch();
+                        }else{
+                          calendar.getEventSourceById(responseObj[0]['dept_id']).refetch();
+                        }
+                        $("#element_to_pop_up").bPopup().close();
+                      }else if(responseObj.status == -1){
+                        alert("리스트를 수정하는데 오류가 발생했습니다");
+                      }
+                    },
+                  });
+                }
+              } else if(!titleCheck){
+                alert("제목을 입력하세요");
+                $("input[name=newScheduleTitle]").focus();
+              } else if(!correctTime){
+                alert("종료시간이 시작시간보다 빠릅니다");
+              } else if(!annualCheck){
+                alert("연차일수가 모자랍니다");
+              }
+            return false;
+          });
+          // 저장버튼 클릭 끝
+
+
+
+          // 수정버튼 클릭
+        $(".updateButton").click(function(){ 
+          $("#element_to_pop_up2").bPopup().close();
+          $(".trigger").val(1);
+          $("input[name=newScheduleNo]").val($(".scheduleNo").val());
+          $("input[name=newScheduleTitle]").val($(".scheduleTitle").text());
+          if($(".scheduleStatus").text() == "업무"){
+            $("#statusBox").val("1").prop("selected", true);
+          } else if($(".scheduleStatus").text() == "출장"){
+            $("#statusBox").val("2").prop("selected", true);
+          } else if($(".scheduleStatus").text() == "연차"){
+            $("#statusBox").val("3").prop("selected", true);
+          } else {
+            $("#statusBox").val("4").prop("selected", true);
+          }
+          var string = $(".scheduleTime").text();
+          $("input[name=newScheduleStartDate]").val(string.substring(0,10));
+          $("input[name=newScheduleStartTime]").val(string.substring(11, 16));
+          $("input[name=newScheduleEndDate]").val(string.substring(19,29));
+          $("input[name=newScheduleEndTime]").val(string.substring(30,35));
+
+          var content = document.getElementById("textarea");
+          content.value = $(".scheduleContent").text();
+          
+          var fileValue = $("input[name=uploadFile]").val().split("\\");
+          var realfilename = fileValue[fileValue.length-1];
+          $("input[name=prevFileName]").val(realfilename);
+
+          if($(".scheduleStatus").text() == "팀"){
+            $("#statusBox>.departmentStatus").removeAttr('disabled');
+            $("#statusBox>.employeeStatus").attr('disabled', true);
+          }else{
+            $("#statusBox>.employeeStatus").removeAttr('disabled');
+            $("#statusBox>.departmentStatus").attr('disabled', true);
+          }
+          
+          $('#element_to_pop_up').bPopup({
+              modalClose: false,
+          });
+        });
+
+        // 수정버튼 클릭 끝
+
+        //삭제버튼 클릭
+        $(".deleteButton").click(function(){
+          $('#element_to_pop_up3').bPopup({
+              modalClose: false,
+          });
+        });
+        //삭제버튼 클릭 끝
+
+        //삭제버튼 확인 클릭
+        $("#deleteOK").click(function(){
+          var scheduleno = $(".scheduleNo").val();
+          var status = 0;
+          filepath = $(".filePath").val();
+          filename = $(".scheduleFile").text();
+          if($(".scheduleStatus").html() == "업무"){
+            status = 1;
+          }else if($(".scheduleStatus").html() == "출장"){
+            status = 2;
+          }else if($(".scheduleStatus").html() == "연차"){
+            status = 3;
+          }else if($(".scheduleStatus").html() == "팀"){
+            status = 4;
+          }
+          $.ajax({
+            url: "./deleteevent",
+            data : {"scheduleNo" : scheduleno, "status" : status, "filepath" : filepath, "filename" : filename},
+            success: function(responseObj){
+              if(responseObj.status == 0){
+                var selectEvent = calendar.getEventById(scheduleno);
+                selectEvent.remove();
+                $("#element_to_pop_up2").bPopup().close();
+                $("#element_to_pop_up3").bPopup().close();
+                $("#element_to_pop_up4").bPopup({
+                  modalClose: false,
+                });
+              }else if(responseObj.status == -1){
+                $("#element_to_pop_up5").bPopup({
+                  modalClose: false,
+                });
+              }
+            },
+          });
+          return false;
+        });
+        //삭제버튼 확인 클릭 끝
+
+
+        // 삭제되었을때 모달창 확인 클릭
+        $("#deleteConform").click(function(){
+          $("#element_to_pop_up2").bPopup().close();
+          $("#element_to_pop_up4").bPopup().close();
+        });
+        // 삭제되었을때 모달창 확인 클릭 끝
+
+        // 삭제 오류 떴을때 확인 클릭
+        $("#deleteError").click(function(){
+          $("#element_to_pop_up3").bPopup().close();
+          $("#element_to_pop_up5").bPopup().close();
+        });
+        // 삭제 오류 떴을때 확인 클릭 끝
+
+        //개인일정 체크박스가 변경
+        $("div.employeeCheckBoxDiv input[type=checkbox]").change(function(event){
+          if($(event.target).prop("checked")){
+            // statusArr.splice($(event.target).val()-1,0,$(event.target).val());
+            if($(event.target).val() == 1){
+              empcheckedArr[0] = "1";
+            }else if($(event.target).val() == 2){
+              empcheckedArr[1] = "1";
+            }else if($(event.target).val() == 3){
+              empcheckedArr[2] = "1";
+            }
+          }else{
+            // statusArr.splice(status.includes($(event.target).val()),1);
+            if($(event.target).val() == 1){
+              empcheckedArr[0] = "2";
+            }else if($(event.target).val() == 2){
+              empcheckedArr[1] = "2";
+            }else if($(event.target).val() == 3){
+              empcheckedArr[2] = "2";
+            }
+          }
+          calendar.getEventSourceById($(event.target).val()).refetch();
+          return false;        
+        });
+        //개인일정 체크박스가 변경 끝
+
+        //부서일정 체크박스가 변경
+        $("div.departmentCheckBoxDiv input[type=checkbox]").change(function(event){
+          var eventSource = calendar.getEventSourceById($(event.target).val());
+          // var eventArr = eventSource.getEvents();
+          if($(event.target).prop("checked")){
+            // calendar.addEventSource( source )
+            // eventSource.addEvent(eventArr, calendar.getEventSourceById($(event.target).val()));
+            if($(event.target).val() == 1000){
+              checkedArr[0] = "1";
+            }else if($(event.target).val() == 2000){
+              checkedArr[1] = "1";
+            }else if($(event.target).val() == 3000){
+              checkedArr[2] = "1";
+            }else if($(event.target).val() == 4000){
+              checkedArr[3] = "1";
+            }else if($(event.target).val() == 5000){
+              checkedArr[4] = "1";
+            }
+          }else{
+            if($(event.target).val() == 1000){
+              checkedArr[0] = "2";
+            }else if($(event.target).val() == 2000){
+              checkedArr[1] = "2";
+            }else if($(event.target).val() == 3000){
+              checkedArr[2] = "2";
+            }else if($(event.target).val() == 4000){
+              checkedArr[3] = "2";
+            }else if($(event.target).val() == 5000){
+              checkedArr[4] = "2";
+            }
+          }
+          eventSource.refetch();
+          return false;
+        });
+        //부서일정 체크박스가 변경 끝
+
+        //모달창 드래그 가능하게
+        $('#element_to_pop_up').draggable({'cancel':'#modalBody1', containment:'parent', scroll:false});
+        $('#element_to_pop_up2').draggable({'cancel':'#modalBody2', containment:'parent', scroll:false});
+        $('#element_to_pop_up3').draggable({'cancel':'#modalBody3, .modalFooter', containment:'parent', scroll:false});
+        $('#element_to_pop_up4').draggable({'cancel':'#modalBody4, .modalFooter', containment:'parent', scroll:false});
+        $('#element_to_pop_up5').draggable({'cancel':'#modalBody5, .modalFooter', containment:'parent', scroll:false}); // containment:'parent'
+
+
+      });
+    </script>
+  </head>
+
+  <div id="calendarBody">
+    <div class="employeeCheckBoxDiv">
+      <ul>
+        <li><span>업무</span><span><input id="employeestatusCheckBox1"  type="checkbox" checked value = 1></li>
+        <li><span>출장</span><span><input id="employeestatusCheckBox2"  type="checkbox" checked value = 2></li>
+        <li><span>연차</span><span><input id="employeestatusCheckBox3"  type="checkbox" checked value = 3></li>
+      </ul>
+    </div>
+    <!--달력 div-->
+    <div id='calendar'></div>
+
+    <div class="departmentCheckBoxDiv">
+      <ul>
+        <li><div class="deptDiv"><input id="departmentStatusCheckBox1" type="checkbox" checked value = 1000><span>영업팀</span><img src="./img/영업팀.png" class="deptColorLine"></div></li>
+        <li><div class="deptDiv"><input id="departmentStatusCheckBox2" type="checkbox" checked value = 2000><span>총무팀</span><img src="./img/총무팀.png" class="deptColorLine"></div></li>
+        <li><div class="deptDiv"><input id="departmentStatusCheckBox3" type="checkbox" checked value = 3000><span>자료관리팀</span><img src="./img/자료관리팀.png" class="deptColorLine"></div></li>
+        <li><div class="deptDiv"><input id="departmentStatusCheckBox4" type="checkbox" checked value = 4000><span>사업관리팀</span><img src="./img/사업관리팀.png" class="deptColorLine"></div></li>
+        <li><div class="deptDiv"><input id="departmentStatusCheckBox5" type="checkbox" checked value = 5000><span>모바일팀</span><img src="./img/모바일팀.png" class="deptColorLine"></div></li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="element_to_pop_up">
+    <header class="modalHeader">
+      <h2 class="title">일정등록</h2>
+      <a class="b-close" id="modalClose1">닫기</a>
+    </header>
+    <section class="modalBody" id="modalBody1">
+      <form id="newScheduleForm" method="POST">
+        <div class="saveButtonDiv">
+          <ul>
+            <li><input type="submit" value="저장" class="saveButton"></li>
+          </ul>
+        </div>
+        <article class=scheduleArticle>
+          <table class="newScheduleTable">
+            <tbody>
+              <input type="text" name="newScheduleNo" hidden value="0">
+              <tr><th>제목</th><td><input style="width:100%;height:100%;border:1px;padding:0px;" type="text" name="newScheduleTitle" maxlength="100" title="제목" required></td></tr>
+              <tr><th>일정</th>
+                <td>
+                  <select id="statusBox" style="width:100%;height:100%;" name="newScheduleStatus">
+                    <option value="1" class="employeeStatus">업무</option>
+                    <option value="2" class="employeeStatus">출장</option>
+                    <option value="3" class="employeeStatus">연차</option>
+                    <option value="4" class="departmentStatus">팀</option>
+                  </select>
+                </td>
+              </tr>
+              <tr><th>일정시간</th>
+                <td>
+                  <ul class="timeList">
+                    <li><input type="date" name="newScheduleStartDate"></li>
+                    <li><input type="time" name="newScheduleStartTime"></li>
+                    <li><label>~</label></li>
+                    <li><input type="date" name="newScheduleEndDate"></li>
+                    <li><input type="time" name="newScheduleEndTime"></li>
+                  </ul>
+                </td>
+              </tr>
+              <tr><th>내용</th><td><textarea id="textarea" style="width:100%;height:100%;padding:0px;" name="newScheduleContent" rows="7" maxlength="500" title="내용"></textarea></td></tr>
+              <!-- <tr><th>장소</th><td><input style="width:100%;vertical-align: middle;" type="text" name="newSchedulePlace" title="장소"></td></tr> -->
+              <tr><th>첨부파일</th><td><input type="file" name="uploadFile" title="첨부파일"></td></tr>
+              <tr hidden><td><input type="text" name="prevFileName"></td></tr>
+            </tbody>
+          </table>
+        </article>
+      </form>
+    </section>
+  </div>
+
+  <div id="element_to_pop_up2">
+    <header class="modalHeader">
+      <h2 class="title" id="title2">일정조회</h2>
+      <a class="b-close" id="modalClose2">닫기</a>
+    </header>
+    <section class="modalBody" id="modalBody2">
+        <div class="buttonDiv">
+          <ul id="modalUl2">
+            <li><input type="button" value="삭제" class="deleteButton"></li>
+            <li><input type="button" value="수정" class="updateButton"></li>
+          </ul>
+        </div>
+        <article class=scheduleArticle>
+          <table class="scheduleTable">
+            <tbody>
+              <span class="trigger" hidden value="0"></span>
+              <span class="scheduleNo" hidden value="0"></span>
+              <span class="filePath" hidden value=""></span>
+              <tr><th>제목</th><td><div style="width:380px;vertical-align: middle;" class="scheduleTitle">제목 텍스트</div></td></tr>
+              <tr><th>작성자</th><td><div class="scheduleCreateEmployee">작성자</div></td></tr>
+              <tr><th>내용</th><td><pre style="width:100%;max-height:60px;overflow:auto;white-space: pre-wrap;vertical-align:middle;" class="scheduleContent"></pre></td></tr>
+              <tr id="departmentViewTable" style="display:none"><th>부서</th><td><img id="scheduleDepartmentColorLine"><span class="scheduleDepartment"></span></td></tr>
+              <tr><th>일정</th><td><img id="scheduleColorLine"><span class="scheduleStatus"></span></td></tr>
+              <tr><th>일정시간</th><td><div class="scheduleTime">시간</div></td></tr>
+              <tr><th>첨부파일</th><td><div class="scheduleFile">없음</div></td></tr>
+            </tbody>
+          </table>
+        </article>
+    </section>
+  </div>
+
+  <div id="element_to_pop_up3">
+    <header class="modalHeader" >
+      <h3 class="title" style="padding:0px;">삭제</h2>
+      <a class="b-close" id="modalClose3">닫기</a>
+    </header>
+    <section class="modalBody" id="modalBody3">
+      <div style="height:100%;">
+        정말 삭제하시겠습니까?
+      </div>
+    </section>
+    <footer class="modalFooter">
+      <li style="list-style-type:none;float:right;margin:5px;"><input type="button" value="취소" class="b-close"></li>
+      <li style="list-style-type:none;float:right;margin:5px;"><input type="button" value="삭제" id="deleteOK"></li>
+    </footer>
+  </div>
+
+  <div id="element_to_pop_up4">
+    <header class="modalHeader" id="modalHeader4">
+      <h2 class="title">정보</h2>
+    </header>
+    <section class="modalBody" id="modalBody4">
+      <div style="height:100%;">
+        정상적으로 삭제 되었습니다.
+      </div>
+    </section>
+    <footer class="modalFooter">
+      <li style="list-style-type:none;float:right;margin:5px;"><input type="button" value="확인" id="deleteConform"></li>
+    </footer>
+  </div>
+
+  <div id="element_to_pop_up5">
+    <header class="modalHeader" id="modalHeader5">
+      <h2 class="title">삭제실패</h2>
+    </header>
+    <section class="modalBody" id="modalBody5">
+      <div style="height:100%;">
+        오류가 발생해 삭제가 완료되지 않았습니다.
+      </div>
+    </section>
+    <footer class="modalFooter">
+      <li style="list-style-type:none;float:right;margin:5px;"><input type="button" value="확인" id="deleteError"></li>
+    </footer>
+  </div>
+</html>
